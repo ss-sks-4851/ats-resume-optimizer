@@ -1,4 +1,4 @@
-# Resume Agent
+# ATS Resume Optimizer
 
 A LangGraph workflow that rewrites a resume to improve its ATS keyword score
 for a given job description. It loops through update, score, and review nodes.
