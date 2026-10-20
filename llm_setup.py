@@ -8,7 +8,7 @@ MODELS = {
     "groq":   ("groq", "openai/gpt-oss-120b"),
 }
 
-def get_llm(provider: str = "google", model: str | None = None, temperature: float = 0):
+def get_llm(provider: str = "groq", model: str | None = None, temperature: float = 0.5):
     if provider not in MODELS:
         raise ValueError(f"Unknown provider '{provider}'. Choose from: {list(MODELS)}")
 

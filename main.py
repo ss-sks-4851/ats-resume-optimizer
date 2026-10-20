@@ -1,6 +1,7 @@
 import re
 import sys
 import operator
+import time
 from typing import Annotated, TypedDict
 
 from pypdf import PdfReader
@@ -11,9 +12,9 @@ from llm_setup import get_llm, text_of
 # =====================================================================
 # 1. MODELS (one per role)
 # =====================================================================
-analyzer_llm = get_llm("google")                              # keyword extraction
-updater_llm  = get_llm("google")                              # rewrites the resume
-reviewer_llm = get_llm("groq", model="openai/gpt-oss-120b")   # critic (different model family)
+analyzer_llm = get_llm("groq", model="openai/gpt-oss-120b") #get_llm("google")                              # keyword extraction
+updater_llm  = get_llm("groq", model="openai/gpt-oss-120b") #get_llm("google")                              # rewrites the resume
+reviewer_llm = get_llm("groq", model="qwen/qwen3.8-27b")   # critic (different model family)
 
 
 # =====================================================================
@@ -46,16 +47,26 @@ class ResumeState(TypedDict):
 # =====================================================================
 # 4. HELPERS
 # =====================================================================
-def ask(llm, prompt: str, check=None, tries: int = 3) -> str:
+def ask(llm, prompt: str, check=None, tries: int = 4) -> str:
     """Call the LLM until the reply is non-empty and passes `check` (if given).
-    On retries we add a nudge so the model doesn't just repeat itself."""
+    Waits and retries on temporary API errors (503 overloaded, 429 rate limit)."""
     text = ""
     for attempt in range(1, tries + 1):
         nudge = ""
-        if attempt > 1:
+        if attempt > 1 and text:
             nudge = ("\n\nIMPORTANT: Your previous reply was incomplete or badly "
                      "formatted. Reply again with EVERY required field fully filled in.")
-        text = text_of(llm.invoke(prompt + nudge)).strip()
+        try:
+            text = text_of(llm.invoke(prompt + nudge)).strip()
+        except Exception as e:
+            temporary = any(code in str(e) for code in ("503", "429", "UNAVAILABLE", "RESOURCE_EXHAUSTED"))
+            if not temporary or attempt == tries:
+                raise                      # a real error (bad key, bad model): don't hide it
+            wait = 15 * attempt            # 15s, 30s, 45s
+            print(f"  (temporary API error, waiting {wait}s, retry {attempt}/{tries})")
+            time.sleep(wait)
+            continue
+
         if text and (check is None or check(text)):
             return text
         print(f"  (bad or incomplete reply, retry {attempt}/{tries})")
