@@ -1,0 +1,12 @@
+# secrets
+.env
+
+# personal data
+resume.pdf
+job_description.txt
+final_resume.txt
+
+# python junk
+__pycache__/
+*.pyc
+.vscode/

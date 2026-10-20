@@ -1,0 +1,7 @@
+langgraph
+langchain
+langchain-google-genai
+langchain-groq
+pypdf
+pydantic
+python-dotenv
